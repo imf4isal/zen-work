@@ -3,7 +3,7 @@ function App() {
 
   return (
     <>
-      helloø
+      <p className='text-3xl font-bold underline text-red-500'>hello</p>
     </>
   )
 }
