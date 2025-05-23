@@ -8,8 +8,8 @@ const DeepWorkLogger = () => {
   const [isDistracted, setIsDistracted] = useState(false);
   const [distractionReason, setDistractionReason] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [distractionStartTime, setDistractionStartTime] = useState(null);
 
-  // Load data from localStorage on component mount
   useEffect(() => {
     const savedData = localStorage.getItem('deepWorkData');
     if (savedData) {
@@ -24,7 +24,6 @@ const DeepWorkLogger = () => {
     }
   }, []);
 
-  // Save to localStorage whenever sessions change (but not on initial load)
   useEffect(() => {
     if (sessions.length > 0) {
       const dataToSave = {
@@ -81,24 +80,29 @@ const DeepWorkLogger = () => {
     setDistractions([]);
     setIsDistracted(false);
     setDistractionReason('');
+    setDistractionStartTime(null);
   };
 
   const logDistraction = () => {
     setIsActive(false);
     setIsDistracted(true);
+    setDistractionStartTime(Date.now());
   };
 
   const resumeFromDistraction = () => {
-    if (distractionReason.trim()) {
+    if (distractionReason.trim() && distractionStartTime) {
+      const distractionDuration = Math.round((Date.now() - distractionStartTime) / 1000);
       const newDistraction = {
         id: Date.now(),
         reason: distractionReason.trim(),
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        duration: distractionDuration
       };
       setDistractions([...distractions, newDistraction]);
       setDistractionReason('');
       setIsDistracted(false);
       setIsActive(true);
+      setDistractionStartTime(null);
     }
   };
 
@@ -106,6 +110,7 @@ const DeepWorkLogger = () => {
     setIsDistracted(false);
     setDistractionReason('');
     setIsActive(true);
+    setDistractionStartTime(null);
   };
 
   const clearHistory = () => {
@@ -113,7 +118,6 @@ const DeepWorkLogger = () => {
     localStorage.removeItem('deepWorkData');
   };
 
-  // Group sessions by date
   const groupSessionsByDate = (sessions) => {
     const groups = {};
     sessions.forEach(session => {
@@ -135,7 +139,9 @@ const DeepWorkLogger = () => {
       const durationMin = Math.round(session.duration / 60 * 100) / 100;
       const durationFormatted = formatTime(session.duration);
       const distractionsCount = session.distractions.length;
-      const distractionDetails = session.distractions.map(d => `${d.reason} (${d.timestamp})`).join('; ');
+      const distractionDetails = session.distractions.map(d => 
+        `${d.reason} (${d.timestamp}${d.duration ? ` - ${formatTime(d.duration)}` : ''})`
+      ).join('; ');
       
       return [date, durationMin, durationFormatted, distractionsCount, distractionDetails];
     });
@@ -196,7 +202,7 @@ const DeepWorkLogger = () => {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
   };
 
   return (
@@ -321,7 +327,6 @@ const DeepWorkLogger = () => {
           </div>
         )}
 
-        {/* Control Buttons */}
         <div className="flex justify-center space-x-4">
           {!isActive && time === 0 && !isDistracted && (
             <button
@@ -367,7 +372,6 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
-        {/* Session History */}
         {sessions.length > 0 && (
           <div className="border-t border-gray-200 pt-8">
             <div className="flex justify-between items-center mb-4">
@@ -406,7 +410,9 @@ const DeepWorkLogger = () => {
                             <div className="mt-1 space-y-1">
                               {session.distractions.map((d) => (
                                 <div key={d.id} className="text-xs text-gray-400 pl-2 border-l-2 border-gray-200">
-                                  {d.reason} <span className="text-gray-300">({d.timestamp})</span>
+                                  {d.reason} <span className="text-gray-300">
+                                    ({d.timestamp}{d.duration ? ` • ${formatTime(d.duration)}` : ''})
+                                  </span>
                                 </div>
                               ))}
                             </div>
