@@ -8,6 +8,8 @@ const DeepWorkLogger = () => {
   const [isDistracted, setIsDistracted] = useState(false);
   const [distractionReason, setDistractionReason] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [distractionStartTime, setDistractionStartTime] = useState(null);
+  const [currentDistractionTime, setCurrentDistractionTime] = useState(0);
 
   useEffect(() => {
     const savedData = localStorage.getItem('deepWorkData');
@@ -45,6 +47,18 @@ const DeepWorkLogger = () => {
     return () => clearInterval(interval);
   }, [isActive, time]);
 
+  useEffect(() => {
+    let interval = null;
+    if (isDistracted && distractionStartTime) {
+      interval = setInterval(() => {
+        setCurrentDistractionTime(Math.floor((Date.now() - distractionStartTime) / 1000));
+      }, 1000);
+    } else {
+      setCurrentDistractionTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isDistracted, distractionStartTime]);
+
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -79,24 +93,31 @@ const DeepWorkLogger = () => {
     setDistractions([]);
     setIsDistracted(false);
     setDistractionReason('');
+    setDistractionStartTime(null);
+    setCurrentDistractionTime(0);
   };
 
   const logDistraction = () => {
     setIsActive(false);
     setIsDistracted(true);
+    setDistractionStartTime(Date.now());
+    setCurrentDistractionTime(0);
   };
 
   const resumeFromDistraction = () => {
-    if (distractionReason.trim()) {
+    if (distractionReason.trim() && distractionStartTime) {
+      const distractionDuration = Math.round((Date.now() - distractionStartTime) / 1000);
       const newDistraction = {
         id: Date.now(),
         reason: distractionReason.trim(),
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        duration: distractionDuration
       };
       setDistractions([...distractions, newDistraction]);
       setDistractionReason('');
       setIsDistracted(false);
       setIsActive(true);
+      setDistractionStartTime(null);
     }
   };
 
@@ -104,6 +125,8 @@ const DeepWorkLogger = () => {
     setIsDistracted(false);
     setDistractionReason('');
     setIsActive(true);
+    setDistractionStartTime(null);
+    setCurrentDistractionTime(0);
   };
 
   const clearHistory = () => {
@@ -132,7 +155,9 @@ const DeepWorkLogger = () => {
       const durationMin = Math.round(session.duration / 60 * 100) / 100;
       const durationFormatted = formatTime(session.duration);
       const distractionsCount = session.distractions.length;
-      const distractionDetails = session.distractions.map(d => `${d.reason} (${d.timestamp})`).join('; ');
+      const distractionDetails = session.distractions.map(d => 
+        `${d.reason} (${d.timestamp}${d.duration ? ` - ${formatTime(d.duration)}` : ''})`
+      ).join('; ');
       
       return [date, durationMin, durationFormatted, distractionsCount, distractionDetails];
     });
@@ -278,13 +303,17 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
+        {/* Distraction Input Modal */}
         {isDistracted && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 w-full max-w-sm space-y-4">
               <div className="text-center">
-                <h3 className="text-sm uppercase tracking-wide text-gray-600 mb-4">
+                <h3 className="text-sm uppercase tracking-wide text-gray-600 mb-2">
                   What distracted you?
                 </h3>
+                <div className="text-lg font-mono text-red-600 mb-4">
+                  {formatTime(currentDistractionTime)}
+                </div>
                 <input
                   type="text"
                   value={distractionReason}
@@ -359,7 +388,6 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
-        {/* Session History */}
         {sessions.length > 0 && (
           <div className="border-t border-gray-200 pt-8">
             <div className="flex justify-between items-center mb-4">
@@ -398,7 +426,9 @@ const DeepWorkLogger = () => {
                             <div className="mt-1 space-y-1">
                               {session.distractions.map((d) => (
                                 <div key={d.id} className="text-xs text-gray-400 pl-2 border-l-2 border-gray-200">
-                                  {d.reason} <span className="text-gray-300">({d.timestamp})</span>
+                                  {d.reason} <span className="text-gray-300">
+                                    ({d.timestamp}{d.duration ? ` • ${formatTime(d.duration)}` : ''})
+                                  </span>
                                 </div>
                               ))}
                             </div>
