@@ -568,12 +568,12 @@ const DeepWorkLogger = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between p-4 font-mono">
+      <div className="text-center">
+        <div className="text-xs text-gray-400">zen work</div>
+      </div>
+      
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <div className="text-xs text-gray-400 mb-8">zen work</div>
-          </div>
-          
           <Header 
             showSettings={showSettings} 
             onToggleSettings={() => setShowSettings(!showSettings)} 
@@ -590,15 +590,6 @@ const DeepWorkLogger = () => {
           
           <Timer time={time} distractions={distractions} />
 
-          <DistractionModal
-            isDistracted={isDistracted}
-            distractionReason={distractionReason}
-            setDistractionReason={setDistractionReason}
-            currentDistractionTime={currentDistractionTime}
-            onResume={resumeFromDistraction}
-            onCancel={cancelDistraction}
-          />
-
           <ControlButtons
             isActive={isActive}
             time={time}
@@ -614,6 +605,15 @@ const DeepWorkLogger = () => {
       </div>
       
       <Footer />
+      
+      <DistractionModal
+        isDistracted={isDistracted}
+        distractionReason={distractionReason}
+        setDistractionReason={setDistractionReason}
+        currentDistractionTime={currentDistractionTime}
+        onResume={resumeFromDistraction}
+        onCancel={cancelDistraction}
+      />
     </div>
   );
 };
