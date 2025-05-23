@@ -458,7 +458,7 @@ const DeepWorkLogger = () => {
       
       <div className="mt-8 text-center">
         <div className="text-xs text-gray-400">
-          built by <a href="https://facebook.com/faisal" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">faisal</a>
+          built by <a href="https://facebook.com/imf4isal" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">faisal</a>
         </div>
       </div>
     </div>
