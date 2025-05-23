@@ -9,24 +9,30 @@ const DeepWorkLogger = () => {
   const [distractionReason, setDistractionReason] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
+  // Load data from localStorage on component mount
   useEffect(() => {
     const savedData = localStorage.getItem('deepWorkData');
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        setSessions(parsed.sessions || []);
+        if (parsed.sessions && Array.isArray(parsed.sessions)) {
+          setSessions(parsed.sessions);
+        }
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
     }
   }, []);
 
+  // Save to localStorage whenever sessions change (but not on initial load)
   useEffect(() => {
-    const dataToSave = {
-      sessions,
-      lastUpdated: new Date().toISOString()
-    };
-    localStorage.setItem('deepWorkData', JSON.stringify(dataToSave));
+    if (sessions.length > 0) {
+      const dataToSave = {
+        sessions,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('deepWorkData', JSON.stringify(dataToSave));
+    }
   }, [sessions]);
 
   useEffect(() => {
@@ -104,6 +110,20 @@ const DeepWorkLogger = () => {
 
   const clearHistory = () => {
     setSessions([]);
+    localStorage.removeItem('deepWorkData');
+  };
+
+  // Group sessions by date
+  const groupSessionsByDate = (sessions) => {
+    const groups = {};
+    sessions.forEach(session => {
+      const date = new Date(session.timestamp).toDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(session);
+    });
+    return groups;
   };
 
   const exportToCSV = () => {
@@ -176,13 +196,14 @@ const DeepWorkLogger = () => {
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
+    event.target.value = ''; // Reset file input
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-mono">
       <div className="w-full max-w-md space-y-8">
         
+        {/* Header with Settings */}
         <div className="flex justify-between items-center">
           <div></div>
           <button
@@ -193,6 +214,7 @@ const DeepWorkLogger = () => {
           </button>
         </div>
         
+        {/* Settings Panel */}
         {showSettings && (
           <div className="border border-gray-200 bg-white p-4 space-y-4">
             <h3 className="text-sm uppercase tracking-wide text-gray-600 mb-4">Data Management</h3>
@@ -250,6 +272,7 @@ const DeepWorkLogger = () => {
           </div>
         )}
         
+        {/* Timer Display */}
         <div className="text-center">
           <div className="text-6xl font-light text-gray-800 mb-2 tracking-wider">
             {formatTime(time)}
@@ -261,6 +284,7 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
+        {/* Distraction Input Modal */}
         {isDistracted && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 w-full max-w-sm space-y-4">
@@ -297,6 +321,7 @@ const DeepWorkLogger = () => {
           </div>
         )}
 
+        {/* Control Buttons */}
         <div className="flex justify-center space-x-4">
           {!isActive && time === 0 && !isDistracted && (
             <button
@@ -342,51 +367,69 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
+        {/* Session History */}
         {sessions.length > 0 && (
           <div className="border-t border-gray-200 pt-8">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm uppercase tracking-wide text-gray-600">Recent Sessions</h3>
+              <h3 className="text-sm uppercase tracking-wide text-gray-600">Session History</h3>
               <div className="flex space-x-3 text-xs text-gray-400">
                 <span>{sessions.length} total</span>
               </div>
             </div>
             
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {sessions.slice(0, 8).map((session) => (
-                <div key={session.id} className="border-b border-gray-100 pb-2">
-                  <div className="flex justify-between items-center py-1">
-                    <div className="text-sm text-gray-800">
-                      {formatTime(session.duration)}
+            <div className="space-y-4 max-h-80 overflow-y-auto">
+              {Object.entries(groupSessionsByDate(sessions))
+                .sort(([a], [b]) => new Date(b) - new Date(a))
+                .map(([date, dateSessions]) => (
+                  <div key={date} className="space-y-2">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium border-b border-gray-100 pb-1">
+                      {date === new Date().toDateString() ? 'Today' : 
+                       date === new Date(Date.now() - 86400000).toDateString() ? 'Yesterday' :
+                       new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center space-x-3">
-                      {session.distractions.length > 0 && (
-                        <span>{session.distractions.length}d</span>
-                      )}
-                      <span>{session.timestamp.split(',')[1].trim()}</span>
-                    </div>
-                  </div>
-                  {session.distractions.length > 0 && (
-                    <div className="mt-1 space-y-1">
-                      {session.distractions.map((d) => (
-                        <div key={d.id} className="text-xs text-gray-400 pl-2 border-l-2 border-gray-200">
-                          {d.reason} <span className="text-gray-300">({d.timestamp})</span>
+                    
+                    <div className="space-y-2 pl-2">
+                      {dateSessions.map((session) => (
+                        <div key={session.id} className="border-b border-gray-50 pb-2">
+                          <div className="flex justify-between items-center py-1">
+                            <div className="text-sm text-gray-800">
+                              {formatTime(session.duration)}
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center space-x-3">
+                              {session.distractions.length > 0 && (
+                                <span>{session.distractions.length}d</span>
+                              )}
+                              <span>{session.timestamp.split(',')[1]?.trim() || new Date(session.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                          {session.distractions.length > 0 && (
+                            <div className="mt-1 space-y-1">
+                              {session.distractions.map((d) => (
+                                <div key={d.id} className="text-xs text-gray-400 pl-2 border-l-2 border-gray-200">
+                                  {d.reason} <span className="text-gray-300">({d.timestamp})</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
+                      
+                      <div className="text-xs text-gray-400 pl-2 pt-1">
+                        {dateSessions.length} session{dateSessions.length !== 1 ? 's' : ''} • {' '}
+                        {formatTime(dateSessions.reduce((acc, s) => acc + s.duration, 0))} total
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
             </div>
             
-            {sessions.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="text-xs text-gray-500 text-center">
-                  Total: {formatTime(sessions.reduce((acc, s) => acc + s.duration, 0))} 
-                  {' • '}
-                  {sessions.reduce((acc, s) => acc + s.distractions.length, 0)} distractions
-                </div>
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="text-xs text-gray-500 text-center">
+                Total: {formatTime(sessions.reduce((acc, s) => acc + s.duration, 0))} 
+                {' • '}
+                {sessions.reduce((acc, s) => acc + s.distractions.length, 0)} distractions
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
