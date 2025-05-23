@@ -8,7 +8,6 @@ const DeepWorkLogger = () => {
   const [isDistracted, setIsDistracted] = useState(false);
   const [distractionReason, setDistractionReason] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [distractionStartTime, setDistractionStartTime] = useState(null);
 
   useEffect(() => {
     const savedData = localStorage.getItem('deepWorkData');
@@ -80,29 +79,24 @@ const DeepWorkLogger = () => {
     setDistractions([]);
     setIsDistracted(false);
     setDistractionReason('');
-    setDistractionStartTime(null);
   };
 
   const logDistraction = () => {
     setIsActive(false);
     setIsDistracted(true);
-    setDistractionStartTime(Date.now());
   };
 
   const resumeFromDistraction = () => {
-    if (distractionReason.trim() && distractionStartTime) {
-      const distractionDuration = Math.round((Date.now() - distractionStartTime) / 1000);
+    if (distractionReason.trim()) {
       const newDistraction = {
         id: Date.now(),
         reason: distractionReason.trim(),
-        timestamp: new Date().toLocaleTimeString(),
-        duration: distractionDuration
+        timestamp: new Date().toLocaleTimeString()
       };
       setDistractions([...distractions, newDistraction]);
       setDistractionReason('');
       setIsDistracted(false);
       setIsActive(true);
-      setDistractionStartTime(null);
     }
   };
 
@@ -110,7 +104,6 @@ const DeepWorkLogger = () => {
     setIsDistracted(false);
     setDistractionReason('');
     setIsActive(true);
-    setDistractionStartTime(null);
   };
 
   const clearHistory = () => {
@@ -139,9 +132,7 @@ const DeepWorkLogger = () => {
       const durationMin = Math.round(session.duration / 60 * 100) / 100;
       const durationFormatted = formatTime(session.duration);
       const distractionsCount = session.distractions.length;
-      const distractionDetails = session.distractions.map(d => 
-        `${d.reason} (${d.timestamp}${d.duration ? ` - ${formatTime(d.duration)}` : ''})`
-      ).join('; ');
+      const distractionDetails = session.distractions.map(d => `${d.reason} (${d.timestamp})`).join('; ');
       
       return [date, durationMin, durationFormatted, distractionsCount, distractionDetails];
     });
@@ -209,7 +200,6 @@ const DeepWorkLogger = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-mono">
       <div className="w-full max-w-md space-y-8">
         
-        {/* Header with Settings */}
         <div className="flex justify-between items-center">
           <div></div>
           <button
@@ -220,7 +210,6 @@ const DeepWorkLogger = () => {
           </button>
         </div>
         
-        {/* Settings Panel */}
         {showSettings && (
           <div className="border border-gray-200 bg-white p-4 space-y-4">
             <h3 className="text-sm uppercase tracking-wide text-gray-600 mb-4">Data Management</h3>
@@ -278,7 +267,6 @@ const DeepWorkLogger = () => {
           </div>
         )}
         
-        {/* Timer Display */}
         <div className="text-center">
           <div className="text-6xl font-light text-gray-800 mb-2 tracking-wider">
             {formatTime(time)}
@@ -290,7 +278,6 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
-        {/* Distraction Input Modal */}
         {isDistracted && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 w-full max-w-sm space-y-4">
@@ -372,6 +359,7 @@ const DeepWorkLogger = () => {
           )}
         </div>
 
+        {/* Session History */}
         {sessions.length > 0 && (
           <div className="border-t border-gray-200 pt-8">
             <div className="flex justify-between items-center mb-4">
@@ -410,9 +398,7 @@ const DeepWorkLogger = () => {
                             <div className="mt-1 space-y-1">
                               {session.distractions.map((d) => (
                                 <div key={d.id} className="text-xs text-gray-400 pl-2 border-l-2 border-gray-200">
-                                  {d.reason} <span className="text-gray-300">
-                                    ({d.timestamp}{d.duration ? ` • ${formatTime(d.duration)}` : ''})
-                                  </span>
+                                  {d.reason} <span className="text-gray-300">({d.timestamp})</span>
                                 </div>
                               ))}
                             </div>
